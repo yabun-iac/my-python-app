@@ -1,0 +1,58 @@
+name: Deploy Cloud Run
+
+
+on: [push]
+
+jobs:
+
+  testing-action:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: gcp-ts-cloudrun
+
+    steps:
+      # checkout code
+      - uses: actions/checkout@v3
+
+      # setup node (typescript)
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: "npm install"
+        run: npm install
+
+      # auth GCP
+      - name: "auth GCP"
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GCP_TOKEN }}"
+
+      # setup gcloud cli
+      - name: "setup GCP"
+        uses: "google-github-actions/setup-gcloud@v1"
+
+      # configure gcr.io
+      - name: "configure gcr.io"
+        run: gcloud auth configure-docker gcr.io
+
+
+      # pulumi
+      - name: "exec pulumi"
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          export PULUMI_ACCESS_TOKEN=${{secrets.PULUMI_TOKEN}}
+          pulumi login
+          pulumi up -s dev -y
+
+      
+      #- name: "exec pulumi"
+      #  uses:  pulumi/actions@v3
+      #  with:
+      #    command: up
+      #    stack-name: dev
+      #  env:
+      #    PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_TOKEN }}
